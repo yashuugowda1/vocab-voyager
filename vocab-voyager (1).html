@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vocab Voyager</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#020204;
+    --nebula:#8a5cf0;
+    --horizon:#ff8a5c;
+    --starlight:#f2eefc;
+    --star-dim:#948fb8;
+    --disk:#ffc98a;
+    --ok:#7be0b8;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:var(--void);
+    color:var(--starlight);
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    overflow-x:hidden;
+  }
+  #stars{position:fixed; inset:0; z-index:0; display:block;}
+  .wrap{
+    position:relative; z-index:2; max-width:720px; margin:0 auto;
+    padding:26px 20px 60px;
+    padding-top:calc(26px + env(safe-area-inset-top,0px));
+    padding-bottom:calc(60px + env(safe-area-inset-bottom,0px));
+  }
+
+  header{text-align:center; margin-bottom:4px;}
+  .eyebrow{font-size:12.5px; color:var(--star-dim); letter-spacing:.03em;}
+  h1{
+    font-family:'Fraunces',serif; font-style:italic; font-weight:400;
+    font-size:clamp(30px,7vw,46px); margin:6px 0 8px;
+    background:linear-gradient(90deg,var(--starlight),var(--disk) 55%,var(--horizon));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  p.sub{color:var(--star-dim); font-size:14.5px; max-width:44ch; margin:0 auto 8px; line-height:1.55;}
+
+  .stage{ position:relative; width:100%; height:clamp(280px,60vw,420px); margin:8px auto 0; }
+  .glow{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:120%; height:120%; border-radius:50%;
+    background:radial-gradient(circle, rgba(138,92,240,.35), rgba(138,92,240,.08) 40%, transparent 68%);
+    z-index:1; pointer-events:none;
+  }
+  .disk-outer, .disk-inner{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    border-radius:50%; z-index:2; pointer-events:none;
+  }
+  .disk-outer{
+    width:clamp(230px,52vw,340px); height:clamp(230px,52vw,340px);
+    background:conic-gradient(from 0deg, var(--horizon), var(--disk), var(--nebula), var(--horizon));
+    filter:blur(14px); opacity:.55;
+    animation:spin 14s linear infinite;
+  }
+  .disk-inner{
+    width:clamp(170px,38vw,250px); height:clamp(170px,38vw,250px);
+    background:conic-gradient(from 180deg, var(--disk), var(--horizon), var(--disk));
+    filter:blur(6px); opacity:.75;
+    animation:spin 7s linear infinite reverse;
+  }
+  @keyframes spin{ to{ transform:translate(-50%,-50%) rotate(360deg);} }
+
+  .ring{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:clamp(120px,26vw,175px); height:clamp(120px,26vw,175px);
+    border-radius:50%; z-index:3; pointer-events:none;
+    box-shadow:0 0 0 2px rgba(255,201,138,.55), 0 0 24px 4px rgba(255,201,138,.35);
+  }
+  .hole{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:clamp(100px,22vw,150px); height:clamp(100px,22vw,150px);
+    border-radius:50%; z-index:4; cursor:pointer;
+    background:radial-gradient(circle at 38% 32%, #140a24, #000 72%);
+    box-shadow:inset 0 0 30px rgba(0,0,0,.95);
+    animation:breathe 5s ease-in-out infinite;
+  }
+  .hole.active{ animation:none; transform:translate(-50%,-50%) scale(1.08); }
+  @keyframes breathe{
+    0%,100%{ transform:translate(-50%,-50%) scale(1); }
+    50%{ transform:translate(-50%,-50%) scale(1.035); }
+  }
+  .hint{
+    position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
+    font-size:12px; color:var(--star-dim); z-index:5; white-space:nowrap;
+  }
+
+  .queue-label{ font-size:12.5px; color:var(--star-dim); margin:26px 0 8px; text-align:center; }
+  .queue{ display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; scrollbar-width:thin; }
+  .chip{
+    flex:0 0 auto; font-family:inherit; font-size:13.5px; font-weight:600;
+    padding:9px 15px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
+    background:rgba(255,255,255,.05); color:var(--starlight); cursor:pointer;
+    white-space:nowrap; transition:background .2s, border-color .2s, transform .12s;
+  }
+  .chip:hover{ background:rgba(255,255,255,.1); }
+  .chip:active{ transform:scale(.96); }
+  .chip.current{ border-color:var(--horizon); background:rgba(255,138,92,.14); }
+  .chip.learned{ border-color:var(--ok); color:var(--ok); }
+  .chip.learned::after{ content:" ✓"; }
+
+  .add-row{ display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 6px; }
+  .add-row input{
+    font-family:inherit; font-size:13.5px; flex:1; min-width:120px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15);
+    border-radius:10px; color:var(--starlight); padding:9px 12px;
+  }
+  .add-row input:focus{ outline:2px solid var(--nebula); outline-offset:1px; }
+  .add-row button{
+    font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+    padding:9px 16px; border-radius:10px; border:1px solid var(--nebula);
+    background:var(--nebula); color:#fff;
+  }
+  .add-hint{ font-size:12px; color:var(--star-dim); margin-bottom:20px; }
+
+  .panel{
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+    border:1px solid rgba(255,255,255,.1); border-radius:18px;
+    padding:22px 22px 20px; backdrop-filter:blur(6px); min-height:140px;
+  }
+  .panel .word{ font-family:'Fraunces',serif; font-style:italic; font-size:25px; color:var(--disk); }
+  .panel .def{ color:var(--starlight); font-size:15px; line-height:1.55; margin:8px 0 4px;}
+  .panel .ex{ color:var(--star-dim); font-size:14px; font-style:italic;}
+  .placeholder{ color:var(--star-dim); font-size:15px; text-align:center; padding:18px 0;}
+
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+  button.action{
+    font-family:inherit; font-size:14px; font-weight:600;
+    padding:11px 18px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
+    background:rgba(255,255,255,.06); color:var(--starlight); cursor:pointer;
+    transition:background .2s, transform .1s;
+  }
+  button.action:hover{ background:rgba(255,255,255,.12); }
+  button.action:active{ transform:scale(.97); }
+  button.primary{ background:var(--nebula); border-color:var(--nebula); }
+  button.listening{ background:var(--horizon); border-color:var(--horizon); color:#2a1200; }
+
+  .feedback{ margin-top:14px; font-size:14px; min-height:20px; line-height:1.5; }
+  .feedback.ok{ color:var(--ok); }
+  .feedback.retry{ color:var(--horizon); }
+
+  .fallback-row{ display:flex; gap:8px; margin-top:12px; }
+  .fallback-row input{
+    flex:1; font-family:inherit; font-size:14px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15);
+    border-radius:10px; color:var(--starlight); padding:10px 12px;
+  }
+
+  .progress{ display:flex; align-items:center; gap:10px; justify-content:center; margin-top:22px; font-size:13px; color:var(--star-dim); }
+  .bar{ flex:1; max-width:220px; height:6px; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden;}
+  .bar-fill{ height:100%; background:linear-gradient(90deg,var(--nebula),var(--horizon)); width:0%; transition:width .4s ease; }
+  .note{ text-align:center; font-size:12.5px; color:var(--star-dim); margin-top:20px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .disk-outer,.disk-inner,.hole{ animation:none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">a voice agent prototype</div>
+    <h1>Vocab Voyager</h1>
+    <p class="sub">Every word you learn falls into the black hole. Wake it to hear one spoken aloud, then answer back — out loud or typed — to pull it in for good. Touch the stars behind it; they drift.</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="disk-outer" aria-hidden="true"></div>
+    <div class="disk-inner" aria-hidden="true"></div>
+    <div class="ring" aria-hidden="true"></div>
+    <div class="hole" id="hole" role="button" tabindex="0" aria-label="Wake the black hole to hear the current word"></div>
+    <div class="hint" id="hint">tap the black hole</div>
+  </div>
+
+  <div class="queue-label">your words — tap one to summon it</div>
+  <div class="queue" id="queue"></div>
+
+  <div class="add-row">
+    <input id="newWord" type="text" placeholder="Add a word (required)..." />
+    <input id="newDef" type="text" placeholder="Its meaning (optional)..." />
+    <input id="newEx" type="text" placeholder="Example sentence (optional)" />
+    <button id="addBtn">Send into orbit</button>
+  </div>
+  <div class="add-hint" id="addHint">Add any word you're trying to learn — only the word itself is required.</div>
+
+  <div class="panel" id="panel">
+    <div class="placeholder" id="placeholder">Tap the black hole, or pick a word below, to begin.</div>
+  </div>
+
+  <div class="progress">
+    <span id="progressLabel">0 / 9 captured</span>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </div>
+
+  <p class="note" id="note">Voice needs a browser with speech support (Chrome recommended) and mic access. No mic? Type your answer instead.</p>
+</div>
+
+<script>
+/* ---------- interactive starfield ---------- */
+(function(){
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  function size(){
+    c.width = window.innerWidth * devicePixelRatio;
+    c.height = window.innerHeight * devicePixelRatio;
+    c.style.width = window.innerWidth + 'px';
+    c.style.height = window.innerHeight + 'px';
+    const n = Math.min(Math.floor((c.width * c.height) / 7000), 320);
+    stars = Array.from({length:n}, () => {
+      const ox = Math.random()*c.width, oy = Math.random()*c.height;
+      return {ox, oy, x:ox, y:oy, vx:0, vy:0, r:Math.random()*1.5+0.3, a:Math.random(), s:Math.random()*0.015+0.003};
+    });
+  }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    for(const st of stars){
+      const dx = st.ox - st.x, dy = st.oy - st.y;
+      st.vx += dx * 0.004; st.vy += dy * 0.004;
+      st.vx *= 0.9; st.vy *= 0.9;
+      st.x += st.vx; st.y += st.vy;
+
+      st.a += st.s;
+      const alpha = 0.35 + Math.sin(st.a) * 0.4;
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r * devicePixelRatio, 0, 7);
+      ctx.fillStyle = `rgba(242,238,252,${Math.max(alpha,0.05)})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  function disturb(cx, cy){
+    for(const st of stars){
+      const dx = st.x - cx, dy = st.y - cy;
+      const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+      if(dist < 220*devicePixelRatio){
+        const force = (1 - dist/(220*devicePixelRatio)) * 14;
+        st.vx += (dx/dist) * force;
+        st.vy += (dy/dist) * force;
+      }
+    }
+  }
+  c.addEventListener('click', e => disturb(e.clientX*devicePixelRatio, e.clientY*devicePixelRatio));
+  c.addEventListener('touchstart', e => {
+    const t = e.touches[0]; if(!t) return;
+    disturb(t.clientX*devicePixelRatio, t.clientY*devicePixelRatio);
+  }, {passive:true});
+  window.addEventListener('resize', size);
+  size(); draw();
+})();
+
+/* ---------- word data ---------- */
+let WORDS = [
+  {w:"ephemeral", def:"lasting for a very short time.", ex:"The northern lights were ephemeral, gone before he found his camera."},
+  {w:"resilient", def:"able to recover quickly from difficulties.", ex:"The startup stayed resilient through three failed launches."},
+  {w:"meticulous", def:"showing great attention to detail.", ex:"She was meticulous about labeling every wire in the server room."},
+  {w:"ambiguous", def:"open to more than one interpretation.", ex:"His answer was ambiguous, so nobody knew if the deal was on."},
+  {w:"candid", def:"truthful and straightforward; frank.", ex:"The manager gave candid feedback after the demo."},
+  {w:"gregarious", def:"fond of company; sociable.", ex:"She's gregarious, always the one starting conversations at conferences."},
+  {w:"pragmatic", def:"dealing with things sensibly and realistically.", ex:"We took a pragmatic approach and shipped the simpler version first."},
+  {w:"eloquent", def:"fluent and persuasive in speaking or writing.", ex:"His eloquent pitch won over the entire panel."},
+  {w:"tenacious", def:"holding firmly to a course of action.", ex:"She was tenacious, debugging the issue until 2am without giving up."}
+];
+
+let current = null;
+let learned = new Set();
+let recognizing = false;
+
+const hole = document.getElementById('hole');
+const hint = document.getElementById('hint');
+const queueEl = document.getElementById('queue');
+const panel = document.getElementById('panel');
+const noteEl = document.getElementById('note');
+
+function renderQueue(){
+  queueEl.innerHTML = '';
+  WORDS.forEach(item => {
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (learned.has(item.w) ? ' learned' : '') + (current && current.w===item.w ? ' current' : '');
+    chip.textContent = item.w;
+    chip.addEventListener('click', () => selectWord(item));
+    queueEl.appendChild(chip);
+  });
+}
+renderQueue();
+updateProgress();
+
+/* ---------- speech synthesis ---------- */
+function speak(text, onEnd){
+  if(!('speechSynthesis' in window)){ if(onEnd) onEnd(); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.95; u.pitch = 1;
+  u.onend = () => onEnd && onEnd();
+  u.onerror = () => onEnd && onEnd();
+  window.speechSynthesis.speak(u);
+}
+
+/* ---------- speech recognition ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+if(SR){
+  recognition = new SR();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+}
+
+/* ---------- interaction ---------- */
+function selectWord(item){
+  current = item;
+  hint.style.display = 'none';
+  renderQueue();
+  renderPanel();
+  hole.classList.add('active');
+  speak(`${item.w}. ${item.def}. For example: ${item.ex}`, () => hole.classList.remove('active'));
+}
+
+hole.addEventListener('click', () => {
+  const remaining = WORDS.filter(w => !learned.has(w.w));
+  if(remaining.length === 0){
+    speak("You've captured every word in this system. Well voyaged.");
+    return;
+  }
+  const pick = current && !learned.has(current.w) ? current : remaining[Math.floor(Math.random()*remaining.length)];
+  selectWord(pick);
+});
+hole.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); hole.click(); }});
+
+function renderPanel(){
+  const hasSR = !!recognition;
+  panel.innerHTML = `
+    <div class="word">${current.w}</div>
+    <div class="def">${current.def}</div>
+    <div class="ex">"${current.ex}"</div>
+    <div class="controls">
+      <button class="action primary" id="hearBtn">Hear it again</button>
+      ${hasSR ? `<button class="action" id="micBtn">Speak a sentence using it</button>` : ''}
+    </div>
+    ${hasSR ? '' : `
+      <div class="fallback-row">
+        <input id="typeInput" type="text" placeholder="Type a sentence using '${current.w}'..." />
+        <button class="action" id="typeBtn">Check</button>
+      </div>`}
+    <div class="feedback" id="feedback"></div>
+  `;
+  document.getElementById('hearBtn').addEventListener('click', () => {
+    hole.classList.add('active');
+    speak(`${current.w}. ${current.def}`, () => hole.classList.remove('active'));
+  });
+  if(hasSR){
+    document.getElementById('micBtn').addEventListener('click', startListening);
+  } else {
+    document.getElementById('typeBtn').addEventListener('click', () => {
+      evaluateAttempt(document.getElementById('typeInput').value);
+    });
+  }
+}
+
+function startListening(){
+  if(!recognition || recognizing) return;
+  const micBtn = document.getElementById('micBtn');
+  recognizing = true;
+  micBtn.classList.add('listening');
+  micBtn.textContent = 'Listening…';
+  const feedback = document.getElementById('feedback');
+  feedback.textContent = ''; feedback.className = 'feedback';
+
+  recognition.onresult = e => evaluateAttempt(e.results[0][0].transcript);
+  recognition.onerror = () => {
+    feedback.textContent = "Couldn't hear that clearly — check mic permissions, or type your answer below.";
+    feedback.className = 'feedback retry';
+    stopListening(micBtn);
+  };
+  recognition.onend = () => stopListening(micBtn);
+  try{ recognition.start(); } catch(err){ stopListening(micBtn); }
+}
+function stopListening(micBtn){
+  recognizing = false;
+  if(micBtn){ micBtn.classList.remove('listening'); micBtn.textContent = 'Speak a sentence using it'; }
+}
+
+function evaluateAttempt(text){
+  const feedback = document.getElementById('feedback');
+  const clean = (text || '').trim();
+  const usedWord = clean.toLowerCase().includes(current.w.toLowerCase());
+  const longEnough = clean.split(/\s+/).filter(Boolean).length >= 3;
+
+  if(clean.length === 0){
+    feedback.textContent = "No answer caught yet — try again.";
+    feedback.className = 'feedback retry';
+    return;
+  }
+  if(usedWord && longEnough){
+    learned.add(current.w);
+    renderQueue();
+    updateProgress();
+    feedback.textContent = `Captured. "${clean}" — nicely used.`;
+    feedback.className = 'feedback ok';
+    speak(`Captured. Well used.`);
+  } else if(usedWord){
+    feedback.textContent = `Good start — now use "${current.w}" in a full sentence.`;
+    feedback.className = 'feedback retry';
+  } else {
+    feedback.textContent = `Try working "${current.w}" itself into what you say.`;
+    feedback.className = 'feedback retry';
+  }
+}
+
+function updateProgress(){
+  const n = learned.size;
+  document.getElementById('progressLabel').textContent = `${n} / ${WORDS.length} captured`;
+  document.getElementById('barFill').style.width = (n / WORDS.length * 100) + '%';
+  if(n === WORDS.length){
+    noteEl.textContent = "All words captured — add more above, or refresh to start over.";
+  }
+}
+
+/* ---------- add your own word ---------- */
+const addHint = document.getElementById('addHint');
+function addWord(){
+  const wordInput = document.getElementById('newWord');
+  const defInput = document.getElementById('newDef');
+  const exInput = document.getElementById('newEx');
+  const w = wordInput.value.trim();
+  let def = defInput.value.trim();
+  let ex = exInput.value.trim();
+
+  if(!w){
+    addHint.textContent = "Type a word first, then send it into orbit.";
+    addHint.style.color = 'var(--horizon)';
+    wordInput.focus();
+    return;
+  }
+  if(WORDS.some(item => item.w.toLowerCase() === w.toLowerCase())){
+    addHint.textContent = `"${w}" is already in your queue below.`;
+    addHint.style.color = 'var(--horizon)';
+    return;
+  }
+  if(!def) def = `A word you're adding to learn: "${w}".`;
+  if(!ex) ex = `Try using "${w}" in a sentence of your own.`;
+
+  const item = {w, def, ex};
+  WORDS.push(item);
+  wordInput.value = ''; defInput.value = ''; exInput.value = '';
+  addHint.textContent = `"${w}" added — summoning it now.`;
+  addHint.style.color = 'var(--ok)';
+  renderQueue();
+  updateProgress();
+  selectWord(item);
+}
+document.getElementById('addBtn').addEventListener('click', addWord);
+[document.getElementById('newWord'), document.getElementById('newDef'), document.getElementById('newEx')].forEach(inp => {
+  inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addWord(); } });
+});
+
+if(!('speechSynthesis' in window)){
+  noteEl.textContent = "This browser can't speak words aloud, but the panel text and typed practice still work.";
+}
+</script>
+</body>
+</html>
